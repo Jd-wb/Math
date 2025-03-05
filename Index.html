@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Math Study Group</title>
+  <style>
+    /* Disguise as a study tool */
+    body { font-family: Arial; padding: 20px; }
+    #chat { display: none; } /* Hidden by default */
+    #quiz { display: block; } /* Fake math quiz */
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.4.7/peerjs.min.js"></script>
+</head>
+<body>
+  <div id="quiz">
+    <h3>Algebra Practice</h3>
+    <p>Solve: 2x + 5 = 15</p>
+    <input type="text" id="answer" placeholder="Answer...">
+  </div>
+
+  <!-- Hidden Chat (Press Ctrl+Shift+C to toggle) -->
+  <div id="chat" style="display: none;">
+    <input type="text" id="roomId" placeholder="Enter Room ID">
+    <button onclick="joinRoom()">Join</button>
+    <button onclick="hostRoom()">Host Room</button>
+    <div id="messages"></div>
+    <input type="text" id="messageInput" placeholder="Type message...">
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <script>
+    let peer;
+    let conn;
+
+    // Toggle chat with keyboard shortcut
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.shiftKey && e.code === 'KeyC') {
+        document.getElementById('chat').style.display = 'block';
+        document.getElementById('quiz').style.display = 'none';
+      }
+    });
+
+    function hostRoom() {
+      peer = new Peer(); // You become the host
+      peer.on('connection', (connection) => {
+        conn = connection;
+        conn.on('data', (data) => {
+          document.getElementById('messages').innerHTML += `<p>${data}</p>`;
+        });
+      });
+      alert(`Room ID: ${peer.id}. Share this with classmates!`);
+    }
+
+    function joinRoom() {
+      const roomId = document.getElementById('roomId').value;
+      peer = new Peer();
+      conn = peer.connect(roomId);
+      conn.on('open', () => {
+        conn.on('data', (data) => {
+          document.getElementById('messages').innerHTML += `<p>${data}</p>`;
+        });
+      });
+    }
+
+    function sendMessage() {
+      const message = document.getElementById('messageInput').value;
+      conn.send(message);
+      document.getElementById('messageInput').value = '';
+    }
+  </script>
+</body>
+</html>
