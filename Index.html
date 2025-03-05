@@ -2,126 +2,14 @@
 <html>
 <head>
   <title>Study Group Helper</title>
+  <!-- Keep all previous CSS styles -->
   <style>
-    /* Disguised as school tool */
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      margin: 0;
-      padding: 20px;
-      background: #f0f0f0;
-      height: 100vh;
-      box-sizing: border-box;
-    }
-
-    #quiz {
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-
-    /* Hidden Chat Interface */
-    #chat {
-      display: none;
-      background: white;
-      height: calc(100vh - 40px);
-      width: 100%;
-      max-width: 600px;
-      margin: 0 auto;
-      border-radius: 12px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      flex-direction: column;
-    }
-
-    .chat-header {
-      background: #007AFF;
-      color: white;
-      padding: 15px;
-      border-radius: 12px 12px 0 0;
-      font-weight: bold;
-    }
-
-    #messages {
-      flex: 1;
-      padding: 15px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .message {
-      max-width: 70%;
-      padding: 12px 16px;
-      border-radius: 18px;
-      margin: 5px 0;
-      word-break: break-word;
-      position: relative;
-      animation: fadeIn 0.3s ease-in;
-    }
-
-    .message-sent {
-      background: #007AFF;
-      color: white;
-      align-self: flex-end;
-      border-bottom-right-radius: 4px;
-    }
-
-    .message-received {
-      background: #E5E5EA;
-      color: black;
-      align-self: flex-start;
-      border-bottom-left-radius: 4px;
-    }
-
-    .message-time {
-      font-size: 0.75rem;
-      color: rgba(0,0,0,0.4);
-      margin-top: 4px;
-      text-align: right;
-    }
-
-    .input-area {
-      display: flex;
-      padding: 15px;
-      background: #f8f8f8;
-      border-top: 1px solid #ddd;
-      border-radius: 0 0 12px 12px;
-    }
-
-    #messageInput {
-      flex: 1;
-      padding: 12px;
-      border: 1px solid #ddd;
-      border-radius: 20px;
-      margin-right: 10px;
-      font-size: 16px;
-      outline: none;
-    }
-
-    button {
-      background: #007AFF;
-      color: white;
-      border: none;
-      padding: 12px 20px;
-      border-radius: 20px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    button:hover {
-      background: #0063CC;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
+    /* ... (keep all previous CSS styles) ... */
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.4.7/peerjs.min.js"></script>
 </head>
 <body>
-  <!-- Disguise -->
+  <!-- Keep the quiz disguise -->
   <div id="quiz">
     <h2>Math Study Helper</h2>
     <p>Solve for x: 2x + 5 = 15</p>
@@ -129,7 +17,7 @@
     <button style="margin-left: 10px;">Check Answer</button>
   </div>
 
-  <!-- Hidden Chat -->
+  <!-- Chat Interface -->
   <div id="chat">
     <div class="chat-header">Study Group Chat</div>
     <div id="messages"></div>
@@ -142,28 +30,60 @@
   <script>
     let peer;
     let conn;
-    const currentUser = `user_${Math.floor(Math.random() * 1000)}`; // Random user ID
+    const currentUser = `user_${Math.floor(Math.random() * 1000)}`;
+    let isHost = false;
 
     // Toggle chat with Ctrl+Shift+C
     document.addEventListener('keydown', (e) => {
       if (e.ctrlKey && e.shiftKey && e.code === 'KeyC') {
         document.getElementById('chat').style.display = 'flex';
         document.getElementById('quiz').style.display = 'none';
+        if (!peer) initPeerConnection();
       }
     });
 
-    // Initialize Peer
-    function hostRoom() {
-      peer = new Peer(currentUser);
+    function initPeerConnection() {
+      // Use a free signaling server (replace with your own if needed)
+      peer = new Peer(currentUser, {
+        host: '0.peerjs.com',
+        port: 443,
+        path: '/',
+        secure: true
+      });
+
+      peer.on('open', (id) => {
+        if (isHost) {
+          alert(`Share this Room ID: ${id}`);
+        }
+      });
+
       peer.on('connection', (connection) => {
         conn = connection;
         setupConnection(conn);
+        isHost = true;
+      });
+
+      peer.on('error', (err) => {
+        console.error('Peer error:', err);
+        alert('Connection error! Try refreshing.');
       });
     }
 
+    function joinRoom(roomId) {
+      conn = peer.connect(roomId);
+      setupConnection(conn);
+    }
+
     function setupConnection(connection) {
-      connection.on('data', (data) => {
-        addMessage(data, 'received');
+      connection.on('open', () => {
+        alert('Connected to peer!');
+        connection.on('data', (data) => {
+          addMessage(data, 'received');
+        });
+      });
+
+      connection.on('error', (err) => {
+        console.error('Connection error:', err);
       });
     }
 
@@ -186,20 +106,31 @@
       const input = document.getElementById('messageInput');
       const message = input.value.trim();
       
-      if (message && conn) {
+      if (message && conn && conn.open) {
         addMessage(message, 'sent');
         conn.send(message);
         input.value = '';
       }
     }
 
-    // Enter key sends message
+    // Initialize connection when toggling chat
     document.getElementById('messageInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') sendMessage();
     });
 
-    // Start as host automatically
-    hostRoom();
+    // Add room management
+    document.getElementById('chat').innerHTML += `
+      <div class="room-controls">
+        <button onclick="createRoom()">Create Room</button>
+        <input type="text" id="joinCode" placeholder="Enter Room ID">
+        <button onclick="joinRoom(document.getElementById('joinCode').value)">Join</button>
+      </div>
+    `;
+
+    function createRoom() {
+      isHost = true;
+      initPeerConnection();
+    }
   </script>
 </body>
 </html>
